@@ -2515,7 +2515,42 @@ pub fn rustdesk_interval(i: Interval) -> ThrottledInterval {
     ThrottledInterval::new(i)
 }
 
+// === MARQUE PERSO (appliquer_marque.py) ===
+/// Nom de l'app + reglages par defaut (l'utilisateur peut toujours les changer dans l'app).
+pub fn apply_brand_defaults() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        *config::APP_NAME.write().unwrap() = "YDesk".to_owned();
+        fn put(map: &std::sync::RwLock<HashMap<String, String>>, kv: &[(&str, &str)]) {
+            let mut w = map.write().unwrap();
+            for (k, v) in kv {
+                w.entry(k.to_string()).or_insert_with(|| v.to_string());
+            }
+        }
+        put(&config::DEFAULT_DISPLAY_SETTINGS, &[
+            ("view_style", "adaptive"),
+            ("image_quality", "balanced"),
+            ("custom-fps", "60"),
+            ("codec-preference", "auto"),
+            ("i444", "N"),
+        ]);
+        put(&config::DEFAULT_LOCAL_SETTINGS, &[
+            ("enable-udp-punch", "Y"),
+            ("enable-ipv6-punch", "Y"),
+            ("allow-d3d-render", "Y"),
+            ("enable-check-update", "N"),
+        ]);
+        put(&config::DEFAULT_SETTINGS, &[
+            ("enable-hwcodec", "Y"),
+            ("enable-directx-capture", "Y"),
+            ("allow-auto-update", "N"),
+        ]);
+    });
+}
+// === FIN MARQUE PERSO ===
+
 pub fn load_custom_client() {
+    apply_brand_defaults();
     #[cfg(debug_assertions)]
     if let Ok(data) = std::fs::read_to_string("./custom.txt") {
         read_custom_client(data.trim());
@@ -2614,6 +2649,7 @@ pub fn get_dst_align_rgba() -> usize {
 }
 
 pub fn read_custom_client(config: &str) {
+    apply_brand_defaults();
     let Ok(data) = decode64(config) else {
         log::error!("Failed to decode custom client config");
         return;
